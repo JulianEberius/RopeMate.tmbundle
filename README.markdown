@@ -24,9 +24,7 @@ with this program; if not, write to the Free Software Foundation, Inc.,
 
 Have a look at "LICENSE.txt" file for more information.
 
-=================
 EXTERNAL LICENSES
-=================
-
+-----------------
 This project uses code from other open source projects (Rope) 
 which include licenses of their own.
