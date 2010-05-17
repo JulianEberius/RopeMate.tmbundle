@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>beforeRunningCommand</key>
+	<string>nop</string>
+	<key>command</key>
+	<string>url=`refactor.py goto_definition`
+
+if [ "$url" != "" ]
+then
+open $url
+fi
+</string>
+	<key>input</key>
+	<string>document</string>
+	<key>keyEquivalent</key>
+	<string>~ </string>
+	<key>name</key>
+	<string>Go to definition</string>
+	<key>output</key>
+	<string>afterSelectedText</string>
+	<key>scope</key>
+	<string>source.python</string>
+	<key>uuid</key>
+	<string>DE9FF600-B7C9-4F80-AA5F-BC73A7BD07F4</string>
+</dict>
+</plist>

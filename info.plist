@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>name</key>
+	<string>RopeMate</string>
+	<key>ordering</key>
+	<array>
+		<string>6890A228-0BE8-4B15-8401-6E948EB91296</string>
+		<string>6ACE6EA8-D614-440F-A2DE-FD53D1DEA81B</string>
+		<string>21AFB944-D812-48D9-B3C2-23743840CA6F</string>
+		<string>DE9FF600-B7C9-4F80-AA5F-BC73A7BD07F4</string>
+	</array>
+	<key>uuid</key>
+	<string>CA9676A3-2A23-494A-A58B-78111697DB5E</string>
+</dict>
+</plist>
