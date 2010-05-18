@@ -1,26 +1,28 @@
 #!/usr/bin/env python
-import sys, os, subprocess, urllib
+import os, sys
 
 bundle_lib_path = os.environ['TM_BUNDLE_SUPPORT'] + '/lib'
 sys.path.insert(0, bundle_lib_path)
-
-import rope
-from rope.base import project,libutils
-from rope.refactor.extract import ExtractMethod
-from rope.refactor.rename import Rename
-from rope.contrib import codeassist
 
 tm_support_path = os.environ['TM_SUPPORT_PATH'] + '/lib'
 if tm_support_path not in sys.path:
     sys.path.insert(0, tm_support_path)
 
-from tm_helpers import to_plist, from_plist, sh_escape, current_word
-from dialog import menu
+import subprocess, urllib
+
+from tm_helpers import to_plist, from_plist, current_word
+
+import rope
+from rope.base import project,libutils
+from rope.contrib import codeassist
+from rope.refactor.extract import ExtractMethod
+from rope.refactor.importutils import ImportOrganizer
+from rope.refactor.rename import Rename
 
 TM_DIALOG = os.environ['DIALOG_1']
 TM_DIALOG2 = os.environ['DIALOG']
 
-def tooltip(text,title="Exception",style="warning"):
+def tooltip(text):
     options = {'text':str(text)}
     call_dialog(TM_DIALOG2+" tooltip", options)
 
@@ -64,7 +66,6 @@ def get_input(title="Input",default=""):
         nib = os.environ['TM_BUNDLE_SUPPORT']+"/input_hud"
     else:
         nib = os.environ['TM_BUNDLE_SUPPORT']+"/input"
-    plist = to_plist({'title':title, 'result':default})
     out = call_dialog([TM_DIALOG, '-cm', nib], {'title':title, 'result':default}, False)
     if not out:
         return None
@@ -79,11 +80,22 @@ def caret_position(code):
     return offset
 
 def init_from_env():
-    project_dir = os.environ['TM_PROJECT_DIRECTORY']
+    project_dir = os.environ.get('TM_PROJECT_DIRECTORY', None)
     file_path = os.environ['TM_FILEPATH']
     
-    myproject = project.Project(project_dir)
-    myresource = libutils.path_to_resource(myproject, file_path)
+    if project_dir:
+        myproject = project.Project(project_dir)
+        myresource = libutils.path_to_resource(myproject, file_path)
+    else:
+        #create a single-file project (ignoring all other files in the file's folder)
+        folder = os.path.dirname(file_path)
+        ignored_res = os.listdir(folder)
+        ignored_res.remove(os.path.basename(file_path))
+        myproject = project.Project(
+            ropefolder=None,projectroot=folder, ignored_resources=ignored_res)
+        
+        myresource = libutils.path_to_resource(myproject, file_path)
+        
     code = sys.stdin.read()
     return myproject, myresource, code
 
@@ -182,11 +194,31 @@ def filter_changes_in_current_file(changes,resource):
     changes.changes.remove(change_for_current_file)
     return change_for_current_file
 
+def organize_imports():
+    project, resource, code = init_from_env()
+    result = ""
+    try:
+        organizer = ImportOrganizer(project)
+        
+        changes = [organizer.organize_imports(resource),
+                    organizer.handle_long_imports(resource),
+                    organizer.expand_star_imports(resource)]
+        for c in changes:
+            if c:
+                project.do(c)
+    
+        with open(resource.real_path, "r") as f:
+            result = f.read()
+    except Exception, e:
+        tooltip(e)
+    return result
+    
 def main():
     operation = {'extract_method'   : extract_method,
                 'rename'            : rename,
                 'autocomplete'      : autocomplete,
-                'goto_definition'   : goto_definition}\
+                'goto_definition'   : goto_definition,
+                'organize_imports'  : organize_imports}\
                 .get(sys.argv[1])
     sys.stdout.write(operation())
 
