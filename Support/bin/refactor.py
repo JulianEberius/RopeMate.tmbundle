@@ -196,16 +196,19 @@ def filter_changes_in_current_file(changes,resource):
 
 def organize_imports():
     project, resource, code = init_from_env()
-    result = ""
+    result = code
     try:
         organizer = ImportOrganizer(project)
         
-        changes = [organizer.organize_imports(resource),
-                    organizer.handle_long_imports(resource),
-                    organizer.expand_star_imports(resource)]
-        for c in changes:
-            if c:
-                project.do(c)
+        operations = [organizer.organize_imports,
+                    organizer.handle_long_imports,
+                    organizer.expand_star_imports]
+        # haven't found a way to easily combine the changes in-memory
+        # so i commit all of them and then return the changed file's content
+        for op in operations:
+            change = op(resource)
+            if change:
+                project.do(change)
     
         with open(resource.real_path, "r") as f:
             result = f.read()
