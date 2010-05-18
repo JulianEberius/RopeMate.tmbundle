@@ -38,18 +38,16 @@ def register_completion_images():
 
 def completion_popup(proposals):
     register_completion_images()
-    pid = os.fork()
-    if pid is not 0:
-        command = TM_DIALOG2+" popup"
-        word = current_word(r"[A-Za-z_]*")
-        if word:
-            command += " --alreadyTyped "+word
-            
-        options = [dict([['display',p.name], 
-                        ['image', p.type if p.type else "None"]])
-                        for p in proposals]
+    command = TM_DIALOG2+" popup"
+    word = current_word(r"[A-Za-z_0-9]*")
+    if word:
+        command += " --alreadyTyped "+word
         
-        call_dialog(command, {'suggestions' : options})
+    options = [dict([['display',p.name], 
+                    ['image', p.type if p.type else "None"]])
+                    for p in proposals]
+    
+    call_dialog(command, {'suggestions' : options})
 
 def call_dialog(command, options=None, shell=True):
     popen = subprocess.Popen(
@@ -92,33 +90,39 @@ def init_from_env():
 def autocomplete():
     project, resource, code = init_from_env()
     offset = caret_position(code)
-    try:
-        proposals = codeassist.code_assist(project, code, offset, resource)
-        sorted_proposals = codeassist.sorted_proposals(proposals)
-        completion_popup(sorted_proposals)
-    except Exception, e:
-        print e
-        tooltip(e)
+    pid = os.fork()
+    if pid == 0:
+        try:
+            proposals = codeassist.code_assist(project, code, offset, resource)
+            sorted_proposals = codeassist.sorted_proposals(proposals)
+            filtered_proposals = filter(lambda p: p.name != "self=", sorted_proposals)
+            if len(filtered_proposals) == 0:
+                tooltip("No completions found!")
+            else:
+                completion_popup(filtered_proposals)
+        except Exception, e:
+            tooltip(e)
     return ""
 
 def extract_method():
     project, resource, code = init_from_env()
-    
-    offset_length = len(os.environ['TM_SELECTED_TEXT'])
-    offset = caret_position(code)-offset_length
-
-    extractor = ExtractMethod(project, resource, offset, offset+offset_length)
-    
-    func_name = get_input("Extracted method's name")
-    if func_name is None:
-        tooltip("Enter a name for the extraced function!")
-        return code
     try:
+        offset_length = len(os.environ.get('TM_SELECTED_TEXT', ''))
+        if offset_length == 0:
+            tooltip("You have to selected some code to extract it as a method")
+            return code
+        offset = caret_position(code)-offset_length
+        extractor = ExtractMethod(project, resource, offset, offset+offset_length)
+    
+        func_name = get_input("Extracted method's name")
+        if func_name is None:
+            tooltip("Enter a name for the extraced function!")
+            return code
         changes = extractor.get_changes(func_name)
         result = changes.changes[0].new_contents
     except Exception, e:
         tooltip(e)
-        result = code
+        return code
     
     return result
 
@@ -126,12 +130,16 @@ def extract_method():
 def rename():
     project, resource, code = init_from_env()
     
+    if current_word(r"[A-Za-z_0-9]*") == "":
+        tooltip("Select an identifier to rename")
+        return code
+    
     offset = caret_position(code)
     try:
         rename = Rename(project, resource, offset)
         
         func_name = get_input(title="New name",default=rename.old_name)
-        if func_name is None:
+        if func_name is None or func_name == rename.old_name:
             tooltip("Enter a new name!")
             return code
         
@@ -157,7 +165,7 @@ def goto_definition():
         found_resource, line = codeassist.get_definition_location(project, code, offset)
     except rope.base.exceptions.BadIdentifierError, e:
         # fail silently -> the user selected empty space etc
-        pass
+        pass 
     except Exception, e:
         tooltip(e)
     
