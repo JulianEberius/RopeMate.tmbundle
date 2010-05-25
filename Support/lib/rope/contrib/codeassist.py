@@ -339,6 +339,7 @@ class _PythonCodeAssist(object):
             for name, pyname in element.get_attributes().items():
                 if name.startswith(self.starting):
                     result[name] = CompletionProposal(name, compl_scope, pyname)
+                    
         return result
 
     def _undotted_completions(self, scope, result, lineno=None):
