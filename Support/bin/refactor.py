@@ -11,14 +11,12 @@ if tm_support_path not in sys.path:
 
 from tm_helpers import to_plist, from_plist, current_word
 
-import rope.base.simplify
+import rope
 from rope.base import project,libutils
 from rope.contrib import codeassist, autoimport
 from rope.refactor.extract import ExtractMethod
 from rope.refactor.importutils import ImportOrganizer
 from rope.refactor.rename import Rename
-import rope.base.simplify
-import rope.base.simplify
 
 TM_DIALOG = os.environ['DIALOG_1']
 TM_DIALOG2 = os.environ['DIALOG']
