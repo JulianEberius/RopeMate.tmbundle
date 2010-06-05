@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import os, sys
+import os, sys, site
 import subprocess, urllib, re
 
 bundle_lib_path = os.environ['TM_BUNDLE_SUPPORT'] + '/lib'
@@ -41,6 +41,9 @@ def current_identifier():
     return current_word(r"[A-Za-z_0-9]*")
 
 def identifier_before_dot():
+    if 'TM_CURRENT_WORD' not in os.environ:
+        os.environ['TM_CURRENT_WORD'] = os.environ.get('TM_CURRENT_LINE')
+    
     word = current_word(r"^[\.A-Za-z_0-9]*", direction='left')
     if word:
         return word[:-1]
@@ -87,6 +90,21 @@ def caret_position(code):
     offset = sum(line_lengths[0:line_number-1]) + line_index
     return offset
 
+def update_python_path(paths):
+    "update sys.path and make sure the new items come first"
+    old_sys_path_items = list(sys.path)
+    
+    for path in paths:
+        # see if it is a site dir
+        if path.find('site-packages') != -1:
+            site.addsitedir(path)
+        else:
+            sys.path.insert(0, path)
+
+    # Reorder sys.path so new directories at the front.
+    new_sys_path_items = set(sys.path) - set(old_sys_path_items)
+    sys.path = list(new_sys_path_items) + old_sys_path_items
+    
 def init_from_env():
     project_dir = os.environ.get('TM_PROJECT_DIRECTORY', None)
     file_path = os.environ['TM_FILEPATH']
@@ -103,7 +121,9 @@ def init_from_env():
             ropefolder=None,projectroot=folder, ignored_resources=ignored_res)
         
         myresource = libutils.path_to_resource(myproject, file_path)
-        
+    
+    update_python_path( myproject.prefs.get('python_path', []) )
+    
     code = sys.stdin.read()
     return myproject, myresource, code
 
@@ -118,13 +138,14 @@ def autocomplete():
             sorted_proposals = codeassist.sorted_proposals(raw_proposals)
             proposals = filter(lambda p: p.name != "self=", sorted_proposals)
             if len(proposals) == 0:
-                proposals = simple_module_completion()
+                proposals, errors = simple_module_completion()
             if len(proposals) == 0:
-                tooltip("No completions found!")
+                tooltip("No completions found!%s" % errors)
             else:
                 completion_popup(proposals)
         except Exception, e:
             tooltip(e)
+    project.close()
     return result
     
 def simple_module_completion():
@@ -133,14 +154,13 @@ def simple_module_completion():
     try:
         name = identifier_before_dot()
         if not name:
-            return []
-            
+            return [], " Not at an identifier."
+        
         module = None
         try:
-            __import__(name)
-            module = sys.modules[name]
-        except:
-            return []
+            module = __import__(name)
+        except ImportError, e:
+            return [], " %s." % (e)
 
         names = dir(module)
         for name in names:
@@ -159,8 +179,8 @@ def simple_module_completion():
                 result.append(p)
 
     except Exception, e:
-        print e
         return []
+    
     return result
     
 def extract_method():
@@ -272,8 +292,14 @@ def complete_import(project, resource, code, offset):
             self.type = 'module'
 
     importer = autoimport.AutoImport(project=project, observe=False)
-    importer.generate_cache()
     proposals = importer.import_assist(starting=current_identifier())
+    
+    if len(proposals) == 0:
+        importer.generate_cache()
+        importer.generate_modules_cache([current_identifier()])
+        proposals = importer.import_assist(starting=current_identifier())
+        project.close()
+    
     if len(proposals) == 0:
         return []
     else:
@@ -297,6 +323,7 @@ def find_imports():
             proposals = complete_import(project, resource, code, offset)
             if len(proposals) == 0:
                 tooltip("No completions found!")
+                return code
             else:
                 register_completion_images()
                 command = TM_DIALOG2+" popup"
@@ -323,12 +350,10 @@ def find_imports():
                     import_name = re.search(r'match = (.*);', out).group(1)
                 
                 typed_len = len(word)
-                full_name = import_from_mod_name+"."+import_name
-                code = code[:offset-typed_len] + full_name + code[offset:]
+                code = code[:offset-typed_len] + import_name + code[offset:]
                 lines = code.split("\n")
                 idx = find_last_import_line(lines)
-                new_line = "import "+import_from_mod_name
-                tooltip("Added \""+new_line+"\"at line "+str(idx+1))
+                new_line = "from %s import %s" % (import_from_mod_name, import_name)
                 lines = lines[:idx+1]+[new_line]+lines[idx+1:]
                 result = "\n".join(lines)
         except Exception, e:
