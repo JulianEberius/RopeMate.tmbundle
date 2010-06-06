@@ -5,10 +5,6 @@ import urllib, re
 bundle_lib_path = os.environ['TM_BUNDLE_SUPPORT'] + '/lib'
 sys.path.insert(0, bundle_lib_path)
 
-tm_support_path = os.environ['TM_SUPPORT_PATH'] + '/lib'
-if tm_support_path not in sys.path:
-    sys.path.insert(0, tm_support_path)
-
 import rope
 from rope.base import libutils
 from rope.contrib import codeassist, autoimport
@@ -20,7 +16,7 @@ from ropemate import ropecontext
 from ropemate.utils import *
 
 def autocomplete():
-    
+    """Can auto complete your code."""
     with ropecontext() as context:
         offset = caret_position(context.input)
         pid = os.fork()
@@ -185,7 +181,6 @@ def complete_import(project, resource, code, offset):
             self.type = 'module'
 
     importer = autoimport.AutoImport(project=project, observe=False)
-
     # find all files with changes and index them again
     for filename in find_unindexed_files(project._address):
         importer.update_resource(libutils.path_to_resource(project, filename))
