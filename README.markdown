@@ -18,6 +18,10 @@ If you are doing django development, it might help to set the `DJANGO_SETTINGS_M
         # Do whatever you like here!
         os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
 
+You have to install rope somewhere in your python path:
+
+    pip install rope
+
 Copyright (C) 2010 Julian Eberius
 
 Screenshots and more info can be found at the project's [GitHub page](http://specialunderwear.github.com/RopeMate.tmbundle/).
