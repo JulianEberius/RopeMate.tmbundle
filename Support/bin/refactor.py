@@ -40,7 +40,8 @@ def autocomplete():
                 tooltip(e)
 
         return result
-    
+ 
+
 def simple_module_completion():
     """tries a simple hack (import+dir()) to help completion of imported c-modules"""
     result = []
@@ -53,7 +54,7 @@ def simple_module_completion():
         try:
             module = __import__(name)
         except ImportError, e:
-            return [], " %s." % (e)
+            return [], " %s." % e
 
         names = dir(module)
         for name in names:
@@ -72,9 +73,9 @@ def simple_module_completion():
                 result.append(p)
 
     except Exception, e:
-        return []
+        return [], e
     
-    return result
+    return result, None
     
 def extract_method():
     with ropecontext() as context:
