@@ -9,7 +9,7 @@
 	<key>input</key>
 	<string>document</string>
 	<key>keyEquivalent</key>
-	<string>@O</string>
+	<string>^|</string>
 	<key>name</key>
 	<string>Organize Imports</string>
 	<key>output</key>

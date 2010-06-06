@@ -9,7 +9,7 @@
 	<key>input</key>
 	<string>document</string>
 	<key>keyEquivalent</key>
-	<string>@</string>
+	<string>^~@r</string>
 	<key>name</key>
 	<string>Rename</string>
 	<key>output</key>
