@@ -3,6 +3,7 @@ import os, sys
 from rope.base import project,libutils
 
 from ropemate.path import update_python_path
+from rope.contrib import autoimport
 
 class ropecontext(object):
     """a context manager to have a rope project context"""
@@ -17,6 +18,10 @@ class ropecontext(object):
 
         if project_dir:
             self.project = project.Project(project_dir)
+            # no use to have auto import for a single file project
+            if not os.path.exists("%s/.ropeproject/globalnames" % project_dir):
+                importer = autoimport.AutoImport(project=self.project, observe=True)
+                importer.generate_cache()
         else:
             #create a single-file project (ignoring all other files in the file's folder)
             folder = os.path.dirname(file_path)

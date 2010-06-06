@@ -82,3 +82,12 @@ def caret_position(code):
     line_index = int(os.environ['TM_LINE_INDEX'])
     offset = sum(line_lengths[0:line_number-1]) + line_index
     return offset
+
+def find_unindexed_files(directory):
+    """ finds all files that have changed since the .ropeproject/globalnames was last updated"""
+    popen = subprocess.Popen(
+                 "find %s -newer %s/.ropeproject/globalnames -iname '*.py'" % (directory, directory),
+                 stdin=subprocess.PIPE, stdout=subprocess.PIPE,shell=True)
+    
+    stdout, stderr = popen.communicate()
+    return stdout.split('\n')

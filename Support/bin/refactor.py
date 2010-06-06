@@ -10,6 +10,7 @@ if tm_support_path not in sys.path:
     sys.path.insert(0, tm_support_path)
 
 import rope
+from rope.base import libutils
 from rope.contrib import codeassist, autoimport
 from rope.refactor.extract import ExtractMethod
 from rope.refactor.importutils import ImportOrganizer
@@ -183,13 +184,12 @@ def complete_import(project, resource, code, offset):
             self.type = 'module'
 
     importer = autoimport.AutoImport(project=project, observe=False)
+
+    # find all files with changes and index them again
+    for filename in find_unindexed_files(project._address):
+        importer.update_resource(libutils.path_to_resource(project, filename))
+        
     proposals = importer.import_assist(starting=current_identifier())
-    
-    if len(proposals) == 0:
-        importer.generate_cache()
-        importer.generate_modules_cache([current_identifier()])
-        proposals = importer.import_assist(starting=current_identifier())
-        project.close()
     
     if len(proposals) == 0:
         return []
