@@ -12,12 +12,13 @@ from rope.refactor.extract import ExtractMethod
 from rope.refactor.importutils import ImportOrganizer
 from rope.refactor.rename import Rename
 
+import ropemate
 from ropemate import ropecontext
 from ropemate.utils import *
 
 def autocomplete():
     """Can auto complete your code."""
-    with ropecontext() as context:
+    with ropemate.context as context:
         offset = caret_position(context.input)
         pid = os.fork()
         result = ""
@@ -74,7 +75,7 @@ def simple_module_completion():
     return result, None
     
 def extract_method():
-    with ropecontext() as context:
+    with ropemate.context as context:
         try:
             offset_length = len(os.environ.get('TM_SELECTED_TEXT', ''))
             if offset_length == 0:
@@ -96,7 +97,7 @@ def extract_method():
         return result
 
 def rename():
-    with ropecontext() as context:
+    with ropemate.context as context:
         if current_identifier == "":
             tooltip("Select an identifier to rename")
             return context.input
@@ -125,7 +126,7 @@ def rename():
         return result
 
 def goto_definition():
-    with ropecontext() as context:
+    with ropemate.context as context:
         offset = caret_position(context.input)
         found_resource, line = None, None
         try:
@@ -150,7 +151,7 @@ def filter_changes_in_current_file(changes,resource):
     return change_for_current_file
 
 def organize_imports():
-    with ropecontext() as context:
+    with ropemate.context as context:
         result = context.input
         try:
             organizer = ImportOrganizer(context.project)
@@ -201,7 +202,7 @@ def find_imports():
                 x = i
         return x
     
-    with ropecontext() as context:
+    with ropemate.context as context:
         offset = caret_position(context.input)
         pid = os.fork()
         result = ""

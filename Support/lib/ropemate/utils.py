@@ -13,7 +13,7 @@ from tm_helpers import to_plist, from_plist, current_word
 
 __all__ = ('TM_DIALOG', 'TM_DIALOG2', 'tooltip', 'register_completion_images', 
     'current_identifier', 'identifier_before_dot', 'completion_popup', 
-    'call_dialog', 'get_input', 'caret_position', 'find_unindexed_files')
+    'call_dialog', 'get_input', 'caret_position', 'find_unindexed_files', 'from_without_import')
 
 TM_DIALOG = os.environ['DIALOG_1']
 TM_DIALOG2 = os.environ['DIALOG']
@@ -95,3 +95,7 @@ def find_unindexed_files(directory):
     
     stdout, stderr = popen.communicate()
     return stdout.split('\n')
+
+def from_without_import():
+    line = os.environ.get('TM_CURRENT_LINE')
+    return line.find('from ') != -1 and line.find(' import ') == -1

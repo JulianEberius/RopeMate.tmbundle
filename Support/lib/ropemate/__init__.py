@@ -44,3 +44,5 @@ class ropecontext(object):
     def __exit__(self, type , value , traceback):
         if type is None:
             self.project.close()
+
+context = ropecontext()
