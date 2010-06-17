@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-import os, sys
+import os, sys, glob
 import subprocess, urllib, re
+from virtualenv import virtualenv_version
 
 bundle_lib_path = os.environ['TM_BUNDLE_SUPPORT'] + '/lib'
 sys.path.insert(0, bundle_lib_path)
@@ -17,6 +18,7 @@ from rope.contrib import codeassist, autoimport
 from rope.refactor.extract import ExtractMethod
 from rope.refactor.importutils import ImportOrganizer
 from rope.refactor.rename import Rename
+from rope.refactor.localtofield import LocalToField
 
 TM_DIALOG = os.environ['DIALOG_1']
 TM_DIALOG2 = os.environ['DIALOG']
@@ -27,7 +29,7 @@ def tooltip(text):
 
 def register_completion_images():
     icon_dir = os.environ['TM_BUNDLE_SUPPORT'] + '/icons'
-    
+
     images = {
         "function"   : icon_dir+"/Function.png",
         "instance" : icon_dir+"/Property.png",
@@ -43,21 +45,25 @@ def current_identifier():
 def identifier_before_dot():
     word = current_word(r"^[\.A-Za-z_0-9]*", direction='left')
     if word:
-        return word[:-1]
+        splitted = word.split(".")
+        if len(splitted) > 1:
+            return ".".join(splitted[:-1])
+        else:
+            return splitted[0]
     return ""
-    
+
 def completion_popup(proposals):
     register_completion_images()
     command = TM_DIALOG2+" popup"
     word = current_identifier()
     if word:
         command += " --alreadyTyped "+word
-       
-    options = [dict([['display',p.name], 
+
+    options = [dict([['display',p.name],
                     ['image', p.type if p.type else "None"]])
                     for p in proposals]
     call_dialog(command, {'suggestions' : options})
-        
+
 
 def call_dialog(command, options=None, shell=True):
     popen = subprocess.Popen(
@@ -68,7 +74,7 @@ def call_dialog(command, options=None, shell=True):
     else:
         out, _ = popen.communicate()
     return out
-    
+
 def get_input(title="Input",default=""):
     if os.environ.get('TM_RopeMate_HUD', False):
         nib = os.environ['TM_BUNDLE_SUPPORT']+"/input_hud"
@@ -101,9 +107,9 @@ def init_from_env():
         ignored_res.remove(os.path.basename(file_path))
         myproject = project.Project(
             ropefolder=None,projectroot=folder, ignored_resources=ignored_res)
-        
+
         myresource = libutils.path_to_resource(myproject, file_path)
-        
+
     code = sys.stdin.read()
     return myproject, myresource, code
 
@@ -126,15 +132,29 @@ def autocomplete():
         except Exception, e:
             tooltip(e)
     return result
-    
+
+def detect_virtualenv():
+    file_path = os.environ['TM_FILEPATH']
+    path,_ = os.path.split(file_path)
+    while path:
+        if os.path.exists(os.path.join(path,".Python")):
+            return path
+        path,_ = os.path.split(path)
+    return ""
+
 def simple_module_completion():
     """tries a simple hack (import+dir()) to help completion of imported c-modules"""
     result = []
     try:
         name = identifier_before_dot()
+        
+        virtual_env = detect_virtualenv()
+        if virtual_env:
+            execfile(virtual_env+"/bin/activate_this.py", dict(__file__=virtual_env+'/bin/activate_this.py'))
+    
         if not name:
             return []
-            
+
         module = None
         try:
             __import__(name)
@@ -143,6 +163,8 @@ def simple_module_completion():
             return []
 
         names = dir(module)
+        
+        
         for name in names:
             if not name.startswith("__"):
                 p = rope.contrib.codeassist.CompletionProposal(
@@ -157,12 +179,18 @@ def simple_module_completion():
                 else:
                     p.type = 'instance'
                 result.append(p)
-
+                
+        in_dir_names = [os.path.split(n)[1] for n in glob.glob(os.path.join(module.__path__[0], "*"))]
+        in_dir_names = [n.replace(".py","") for n in in_dir_names 
+                            if not n.endswith(".pyc") and not n == "__init__.py"]
+        for n in in_dir_names:
+            result.append(rope.contrib.codeassist.CompletionProposal(
+                    n, None, rope.base.pynames.UnboundName()))
     except Exception, e:
         print e
         return []
     return result
-    
+
 def extract_method():
     project, resource, code = init_from_env()
     try:
@@ -172,7 +200,7 @@ def extract_method():
             return code
         offset = caret_position(code)-offset_length
         extractor = ExtractMethod(project, resource, offset, offset+offset_length)
-    
+
         func_name = get_input("Extracted method's name")
         if func_name is None:
             tooltip("Enter a name for the extraced function!")
@@ -182,25 +210,25 @@ def extract_method():
     except Exception, e:
         tooltip(e)
         return code
-    
+
     return result
 
 def rename():
     project, resource, code = init_from_env()
-    
+
     if current_identifier == "":
         tooltip("Select an identifier to rename")
         return code
-    
+
     offset = caret_position(code)
     try:
         rename = Rename(project, resource, offset)
-        
+
         func_name = get_input(title="New name",default=rename.old_name)
         if func_name is None or func_name == rename.old_name:
             tooltip("Enter a new name!")
             return code
-        
+
         changes = rename.get_changes(func_name, in_hierarchy=True)
         # remove the current file from the changeset.
         # we will apply the changes to this file manually,
@@ -212,7 +240,7 @@ def rename():
     except Exception, e:
         tooltip(e)
         result = code
-    
+
     return result
 
 def goto_definition():
@@ -223,10 +251,10 @@ def goto_definition():
         found_resource, line = codeassist.get_definition_location(project, code, offset)
     except rope.base.exceptions.BadIdentifierError, e:
         # fail silently -> the user selected empty space etc
-        pass 
+        pass
     except Exception, e:
         tooltip(e)
-    
+
     if found_resource is not None:
         return 'txmt://open?url=file://%s&line=%d' % (
                 urllib.quote(found_resource.real_path), line)
@@ -245,7 +273,7 @@ def organize_imports():
     result = code
     try:
         organizer = ImportOrganizer(project)
-        
+
         operations = [organizer.organize_imports,
                     organizer.handle_long_imports,
                     organizer.expand_star_imports]
@@ -255,13 +283,13 @@ def organize_imports():
             change = op(resource)
             if change:
                 project.do(change)
-    
+
         with open(resource.real_path, "r") as f:
             result = f.read()
     except Exception, e:
         tooltip(e)
     return result
-    
+
 def complete_import(project, resource, code, offset):
     class ImportProposal(object):
         def __init__(self, name, module):
@@ -324,17 +352,30 @@ def find_imports():
                 
                 typed_len = len(word)
                 full_name = import_from_mod_name+"."+import_name
-                code = code[:offset-typed_len] + full_name + code[offset:]
+                code = code[:offset-typed_len] + import_name + code[offset:]
                 lines = code.split("\n")
                 idx = find_last_import_line(lines)
-                new_line = "import "+import_from_mod_name
-                tooltip("Added \""+new_line+"\"at line "+str(idx+1))
+                new_line = "from "+import_from_mod_name+" import "+import_name
+                tooltip("Added \""+new_line+"\"at line "+str(idx+2))
                 lines = lines[:idx+1]+[new_line]+lines[idx+1:]
                 result = "\n".join(lines)
         except Exception, e:
             tooltip(e)
     return result
     
+def local_to_field():
+    project, resource, code = init_from_env()
+    try:
+        offset = caret_position(code)
+        operation = LocalToField(project, resource, offset)
+    
+        changes = operation.get_changes()
+        result = changes.changes[0].new_contents
+    except Exception, e:
+        tooltip(e)
+        return code
+    
+    return result 
 
 def main():
     operation = {'extract_method'   : extract_method,
@@ -342,7 +383,8 @@ def main():
                 'autocomplete'      : autocomplete,
                 'goto_definition'   : goto_definition,
                 'organize_imports'  : organize_imports,
-                'find_imports'      : find_imports}\
+                'find_imports'      : find_imports,
+                'local_to_field'    : local_to_field}\
                 .get(sys.argv[1])
     sys.stdout.write(operation())
 
