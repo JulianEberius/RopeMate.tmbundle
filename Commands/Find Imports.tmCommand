@@ -10,7 +10,7 @@
 	<key>input</key>
 	<string>document</string>
 	<key>keyEquivalent</key>
-	<string>@|</string>
+	<string>@I</string>
 	<key>name</key>
 	<string>Find possible Imports</string>
 	<key>output</key>

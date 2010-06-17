@@ -10,11 +10,11 @@
 	<key>input</key>
 	<string>document</string>
 	<key>keyEquivalent</key>
-	<string>~ </string>
+	<string>^ </string>
 	<key>name</key>
 	<string>Autocomplete</string>
 	<key>output</key>
-	<string>afterSelectedText</string>
+	<string>discard</string>
 	<key>scope</key>
 	<string>source.python</string>
 	<key>uuid</key>

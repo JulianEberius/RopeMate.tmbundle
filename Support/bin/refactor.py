@@ -195,7 +195,7 @@ def complete_import(project, resource, code, offset):
     
 def find_imports():
     def find_last_import_line(lines):
-        x = 0
+        x = -1
         for i in range(len(lines)):
             l = lines[i]
             if l.startswith("from") or l.startswith("import"):
@@ -231,7 +231,7 @@ def find_imports():
                     try: 
                         import_from_mod_name = re.search(r'module = "(.*)";', out).group(1)
                     except:
-                        import_from_mod_name = re.search(r'module = ".*";', out).group(1)
+                        import_from_mod_name = re.search(r'module = (.*);', out).group(1)
                     try:
                         import_name = re.search(r'match = "(.*)";', out).group(1)
                     except:
