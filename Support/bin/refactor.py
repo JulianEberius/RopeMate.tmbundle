@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import os, sys
+import os, sys, glob
 import urllib, re
 
 bundle_lib_path = os.environ['TM_BUNDLE_SUPPORT'] + '/lib'
@@ -11,6 +11,7 @@ from rope.contrib import codeassist, autoimport
 from rope.refactor.extract import ExtractMethod
 from rope.refactor.importutils import ImportOrganizer
 from rope.refactor.rename import Rename
+from rope.refactor.localtofield import LocalToField
 
 import ropemate
 from ropemate import ropecontext
@@ -35,18 +36,20 @@ def autocomplete():
                     completion_popup(proposals)
             except Exception, e:
                 tooltip(e)
-
         return result
- 
 
 def simple_module_completion():
     """tries a simple hack (import+dir()) to help completion of imported c-modules"""
     result = []
     try:
         name = identifier_before_dot()
+        
+        virtual_env = detect_virtualenv()
+        if virtual_env:
+            execfile(virtual_env+"/bin/activate_this.py", dict(__file__=virtual_env+'/bin/activate_this.py'))
+    
         if not name:
             return [], " Not at an identifier."
-        
         module = None
         try:
             module = __import__(name)
@@ -54,6 +57,7 @@ def simple_module_completion():
             return [], " %s." % e
 
         names = dir(module)
+        
         for name in names:
             if not name.startswith("__"):
                 p = rope.contrib.codeassist.CompletionProposal(
@@ -68,7 +72,13 @@ def simple_module_completion():
                 else:
                     p.type = 'instance'
                 result.append(p)
-
+                
+        in_dir_names = [os.path.split(n)[1] for n in glob.glob(os.path.join(module.__path__[0], "*"))]
+        in_dir_names = [n.replace(".py","") for n in in_dir_names 
+                            if not n.endswith(".pyc") and not n == "__init__.py"]
+        for n in in_dir_names:
+            result.append(rope.contrib.codeassist.CompletionProposal(
+                    n, None, rope.base.pynames.UnboundName()))
     except Exception, e:
         return [], e
     
@@ -171,7 +181,7 @@ def organize_imports():
         except Exception, e:
             tooltip(e)
         return result
-    
+
 def complete_import(project, resource, code, offset):
     class ImportProposal(object):
         def __init__(self, name, module):
@@ -238,16 +248,31 @@ def find_imports():
                         import_name = re.search(r'match = (.*);', out).group(1)
                 
                     typed_len = len(word)
-                    output = context.input[:offset-typed_len] + import_name + context.input[offset:]
-                    lines = output.split("\n")
+                    full_name = import_from_mod_name+"."+import_name
+                    code = code[:offset-typed_len] + import_name + code[offset:]
+                    lines = code.split("\n")
                     idx = find_last_import_line(lines)
-                    new_line = "from %s import %s" % (import_from_mod_name, import_name)
+                    new_line = "from "+import_from_mod_name+" import "+import_name
+                    tooltip("Added \""+new_line+"\"at line "+str(idx+2))
                     lines = lines[:idx+1]+[new_line]+lines[idx+1:]
                     result = "\n".join(lines)
             except Exception, e:
                 tooltip(e)
         return result
     
+def local_to_field():
+    project, resource, code = init_from_env()
+    try:
+        offset = caret_position(code)
+        operation = LocalToField(project, resource, offset)
+    
+        changes = operation.get_changes()
+        result = changes.changes[0].new_contents
+    except Exception, e:
+        tooltip(e)
+        return code
+    
+    return result 
 
 def main():
     operation = {'extract_method'   : extract_method,
@@ -255,7 +280,8 @@ def main():
                 'autocomplete'      : autocomplete,
                 'goto_definition'   : goto_definition,
                 'organize_imports'  : organize_imports,
-                'find_imports'      : find_imports}\
+                'find_imports'      : find_imports,
+                'local_to_field'    : local_to_field}\
                 .get(sys.argv[1])
     sys.stdout.write(operation())
 
