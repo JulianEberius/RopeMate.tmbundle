@@ -14,7 +14,6 @@ from rope.refactor.rename import Rename
 from rope.refactor.localtofield import LocalToField
 
 import ropemate
-from ropemate import ropecontext
 from ropemate.utils import *
 
 def autocomplete():
@@ -248,8 +247,7 @@ def find_imports():
                         import_name = re.search(r'match = (.*);', out).group(1)
                 
                     typed_len = len(word)
-                    full_name = import_from_mod_name+"."+import_name
-                    code = code[:offset-typed_len] + import_name + code[offset:]
+                    code = context.input[:offset-typed_len] + import_name + context.input[offset:]
                     lines = code.split("\n")
                     idx = find_last_import_line(lines)
                     new_line = "from "+import_from_mod_name+" import "+import_name
@@ -258,21 +256,22 @@ def find_imports():
                     result = "\n".join(lines)
             except Exception, e:
                 tooltip(e)
+                return context.input
         return result
     
 def local_to_field():
-    project, resource, code = init_from_env()
-    try:
-        offset = caret_position(code)
-        operation = LocalToField(project, resource, offset)
+    with ropemate.context as context:
+        try:
+            offset = caret_position(context.input)
+            operation = LocalToField(context.project, context.resource, offset)
     
-        changes = operation.get_changes()
-        result = changes.changes[0].new_contents
-    except Exception, e:
-        tooltip(e)
-        return code
+            changes = operation.get_changes()
+            result = changes.changes[0].new_contents
+        except Exception, e:
+            tooltip(e)
+            return context.input
     
-    return result 
+        return result 
 
 def main():
     operation = {'extract_method'   : extract_method,
