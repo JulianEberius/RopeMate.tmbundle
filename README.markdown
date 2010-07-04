@@ -11,7 +11,7 @@ Copyright (C) 2010 Julian Eberius
 CONFIGURATION
 -------------
 
-If you are using virtualenv, add the path to the virtualenv in .ropeproject/config.pythonpath:
+If you are using virtualenv, add the path to the virtualenv in .ropeproject/config.py:
 
     # You can extend python path for looking up modules
     prefs.add('python_path', '/Users/ebone/.virtualenvs/lukkien/lib/python2.6/site-packages/')

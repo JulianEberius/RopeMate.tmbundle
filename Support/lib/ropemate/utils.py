@@ -99,12 +99,3 @@ def find_unindexed_files(directory):
 def from_without_import():
     line = os.environ.get('TM_CURRENT_LINE')
     return line.find('from ') != -1 and line.find(' import ') == -1
-
-def detect_virtualenv():
-    file_path = os.environ['TM_FILEPATH']
-    path,_ = os.path.split(file_path)
-    while path:
-        if os.path.exists(os.path.join(path,".Python")):
-            return path
-        path,_ = os.path.split(path)
-    return ""

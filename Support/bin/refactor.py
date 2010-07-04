@@ -42,11 +42,7 @@ def simple_module_completion():
     result = []
     try:
         name = identifier_before_dot()
-        
-        virtual_env = detect_virtualenv()
-        if virtual_env:
-            execfile(virtual_env+"/bin/activate_this.py", dict(__file__=virtual_env+'/bin/activate_this.py'))
-    
+
         if not name:
             return [], " Not at an identifier."
         module = None
@@ -54,7 +50,7 @@ def simple_module_completion():
             module = __import__(name)
         except ImportError, e:
             return [], " %s." % e
-
+        
         names = dir(module)
         
         for name in names:
@@ -71,18 +67,20 @@ def simple_module_completion():
                 else:
                     p.type = 'instance'
                 result.append(p)
-                
-        in_dir_names = [os.path.split(n)[1] for n in glob.glob(os.path.join(module.__path__[0], "*"))]
-        in_dir_names = [n.replace(".py","") for n in in_dir_names 
-                            if not n.endswith(".pyc") and not n == "__init__.py"]
-        for n in in_dir_names:
-            result.append(rope.contrib.codeassist.CompletionProposal(
-                    n, None, rope.base.pynames.UnboundName()))
+        
+        # if module is a package, check the direc tory
+        if hasattr(module,"__path__"):
+          in_dir_names = [os.path.split(n)[1] for n in glob.glob(os.path.join(module.__path__[0], "*"))]
+          in_dir_names = [n.replace(".py","") for n in in_dir_names
+                              if not n.endswith(".pyc") and not n == "__init__.py"]
+          for n in in_dir_names:
+              result.append(rope.contrib.codeassist.CompletionProposal(
+                      n, None, rope.base.pynames.UnboundName()))
     except Exception, e:
         return [], e
     
     return result, None
-    
+
 def extract_method():
     with ropemate.context as context:
         try:
@@ -92,7 +90,7 @@ def extract_method():
                 return context.input
             offset = caret_position(context.input)-offset_length
             extractor = ExtractMethod(context.project, context.resource, offset, offset+offset_length)
-    
+            
             func_name = get_input("Extracted method's name")
             if func_name is None:
                 tooltip("Enter a name for the extraced function!")
@@ -102,7 +100,7 @@ def extract_method():
         except Exception, e:
             tooltip(e)
             return context.input
-    
+        
         return result
 
 def rename():
@@ -110,16 +108,16 @@ def rename():
         if current_identifier == "":
             tooltip("Select an identifier to rename")
             return context.input
-    
+        
         offset = caret_position(context.input)
         try:
             rename = Rename(context.project, context.resource, offset)
-        
+            
             func_name = get_input(title="New name",default=rename.old_name)
             if func_name is None or func_name == rename.old_name:
                 tooltip("Enter a new name!")
                 return context.input
-        
+            
             changes = rename.get_changes(func_name, in_hierarchy=True)
             # remove the current file from the changeset.
             # we will apply the changes to this file manually,
@@ -131,7 +129,7 @@ def rename():
         except Exception, e:
             tooltip(e)
             result = context.input
-    
+        
         return result
 
 def goto_definition():
@@ -142,10 +140,10 @@ def goto_definition():
             found_resource, line = codeassist.get_definition_location(context.project, context.input, offset)
         except rope.base.exceptions.BadIdentifierError, e:
             # fail silently -> the user selected empty space etc
-            pass 
+            pass
         except Exception, e:
             tooltip(e)
-    
+        
         if found_resource is not None:
             return 'txmt://open?url=file://%s&line=%d' % (
                     urllib.quote(found_resource.real_path), line)
@@ -164,7 +162,7 @@ def organize_imports():
         result = context.input
         try:
             organizer = ImportOrganizer(context.project)
-        
+            
             operations = [organizer.organize_imports,
                         organizer.handle_long_imports,
                         organizer.expand_star_imports]
@@ -174,7 +172,7 @@ def organize_imports():
                 change = op(context.resource)
                 if change:
                     context.project.do(change)
-    
+            
             with open(context.resource.real_path, "r") as f:
                 result = f.read()
         except Exception, e:
@@ -189,19 +187,19 @@ def complete_import(project, resource, code, offset):
             self.insert = module+"."+name
             self.module = module
             self.type = 'module'
-
+    
     importer = autoimport.AutoImport(project=project, observe=False)
     # find all files with changes and index them again
     for filename in find_unindexed_files(project._address):
         importer.update_resource(libutils.path_to_resource(project, filename))
-        
+    
     proposals = importer.import_assist(starting=current_identifier())
     
     if len(proposals) == 0:
         return []
     else:
         return [ImportProposal(p[0], p[1]) for p in proposals]
-    
+
 def find_imports():
     def find_last_import_line(lines):
         x = -1
@@ -228,16 +226,16 @@ def find_imports():
                     if word:
                         command += " --alreadyTyped "+word
                     command += " --returnChoice"
-                    options = [dict([['display',p.display], 
+                    options = [dict([['display',p.display],
                                     ['image', p.type if p.type else "None"],
                                     ['match', p.name],
                                     ['module', p.module]])
                                     for p in proposals]
-                
+                    
                     out = call_dialog(command, {'suggestions' : options})
-
+                    
                     # from_plist parses only xml-plists, but dialog returns old-style ascii plists
-                    try: 
+                    try:
                         import_from_mod_name = re.search(r'module = "(.*)";', out).group(1)
                     except:
                         import_from_mod_name = re.search(r'module = (.*);', out).group(1)
@@ -245,7 +243,7 @@ def find_imports():
                         import_name = re.search(r'match = "(.*)";', out).group(1)
                     except:
                         import_name = re.search(r'match = (.*);', out).group(1)
-                
+                    
                     typed_len = len(word)
                     code = context.input[:offset-typed_len] + import_name + context.input[offset:]
                     lines = code.split("\n")
@@ -258,20 +256,20 @@ def find_imports():
                 tooltip(e)
                 return context.input
         return result
-    
+
 def local_to_field():
     with ropemate.context as context:
         try:
             offset = caret_position(context.input)
             operation = LocalToField(context.project, context.resource, offset)
-    
+            
             changes = operation.get_changes()
             result = changes.changes[0].new_contents
         except Exception, e:
             tooltip(e)
             return context.input
-    
-        return result 
+        
+        return result
 
 def main():
     operation = {'extract_method'   : extract_method,
