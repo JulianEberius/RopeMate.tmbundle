@@ -3,10 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>beforeRunningCommand</key>
-	<string>nop</string>
+	<string>saveModifiedFiles</string>
 	<key>command</key>
-	<string>refactor.py find_imports
-</string>
+	<string>in=`cat -`
+out=`echo "$in" | refactor.py find_imports`
+
+if [ "$in" != "$out" ]
+then
+	open "txmt://open/?line=$(($TM_LINE_NUMBER + 1))&amp;column=4"
+fi
+
+echo "$out"</string>
 	<key>input</key>
 	<string>document</string>
 	<key>keyEquivalent</key>

@@ -217,7 +217,7 @@ def find_imports():
             try:
                 proposals = complete_import(context.project, context.resource, context.input, offset)
                 if len(proposals) == 0:
-                    tooltip("No completions found!")
+                    #tooltip("No completions found!")
                     return context.input
                 else:
                     register_completion_images()
@@ -249,7 +249,7 @@ def find_imports():
                     lines = code.split("\n")
                     idx = find_last_import_line(lines)
                     new_line = "from "+import_from_mod_name+" import "+import_name
-                    tooltip("Added \""+new_line+"\"at line "+str(idx+2))
+                    #tooltip("Added \""+new_line+"\"at line "+str(idx+2))
                     lines = lines[:idx+1]+[new_line]+lines[idx+1:]
                     result = "\n".join(lines)
             except Exception, e:
