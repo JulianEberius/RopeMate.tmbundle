@@ -90,7 +90,7 @@ def caret_position(code):
 def find_unindexed_files(directory):
     """ finds all files that have changed since the .ropeproject/globalnames was last updated"""
     popen = subprocess.Popen(
-                 "find %s -newer %s/.ropeproject/globalnames -iname '*.py'" % (directory, directory),
+                 "find \"%s\" -newer \"%s/.ropeproject/globalnames\" -iname '*.py'" % (directory, directory),
                  stdin=subprocess.PIPE, stdout=subprocess.PIPE,shell=True)
     
     stdout, stderr = popen.communicate()
