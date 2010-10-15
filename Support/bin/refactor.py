@@ -137,7 +137,8 @@ def goto_definition():
         offset = caret_position(context.input)
         found_resource, line = None, None
         try:
-            found_resource, line = codeassist.get_definition_location(context.project, context.input, offset)
+            found_resource, line = codeassist.get_definition_location(
+                context.project, context.input, offset, context.resource)
         except rope.base.exceptions.BadIdentifierError, e:
             # fail silently -> the user selected empty space etc
             pass

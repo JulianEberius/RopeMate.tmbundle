@@ -9,7 +9,7 @@
 
 if [ "$url" != "" ]
 then
-open $url
+	open $url
 fi
 </string>
 	<key>input</key>
