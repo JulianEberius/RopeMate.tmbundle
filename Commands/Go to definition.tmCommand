@@ -19,7 +19,7 @@ fi
 	<key>name</key>
 	<string>Go to definition</string>
 	<key>output</key>
-	<string>afterSelectedText</string>
+	<string>showAsTooltip</string>
 	<key>scope</key>
 	<string>source.python</string>
 	<key>uuid</key>

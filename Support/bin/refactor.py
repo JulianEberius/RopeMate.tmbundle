@@ -209,6 +209,16 @@ def find_imports():
             if l.startswith("from") or l.startswith("import"):
                 x = i
         return x
+
+    def correct_pacakges(proposals, context):
+        for p in proposals:
+            path = context.resource.path.split("/")
+            module = p.module.split(".")
+            idx = 0
+            while True:
+                if path[idx] != module[idx]:break
+                idx += 1
+            p.module = ".".join(module[idx:])
     
     with ropemate.context as context:
         offset = caret_position(context.input)
@@ -217,6 +227,7 @@ def find_imports():
         if pid == 0:
             try:
                 proposals = complete_import(context.project, context.resource, context.input, offset)
+                correct_pacakges(proposals, context)
                 if len(proposals) == 0:
                     #tooltip("No completions found!")
                     return context.input
