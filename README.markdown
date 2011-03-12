@@ -2,7 +2,7 @@
 ===========================
 
 Integrates the Python refactoring/completion framework Rope with Textmate.
-Screenshots and more info can be found at the project's [GitHub page](http://specialunderwear.github.com/RopeMate.tmbundle/).
+Screenshots and more info can be found at the project's [GitHub page](http://JulianEberius.github.com/RopeMate.tmbundle/).
 
 Many thanks to Github user [specialunderwear](http://github.com/specialunderwear) for his contributions!
 
