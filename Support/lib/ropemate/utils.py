@@ -1,4 +1,6 @@
 import os
+import pipes
+import shlex
 import sys
 import subprocess
 
@@ -15,8 +17,8 @@ __all__ = ('TM_DIALOG', 'TM_DIALOG2', 'tooltip', 'register_completion_images',
     'current_identifier', 'identifier_before_dot', 'completion_popup', 
     'call_dialog', 'get_input', 'caret_position', 'find_unindexed_files', 'from_without_import')
 
-TM_DIALOG = os.environ['DIALOG_1']
-TM_DIALOG2 = os.environ['DIALOG']
+TM_DIALOG = pipes.quote(os.environ['DIALOG_1'])
+TM_DIALOG2 = pipes.quote(os.environ['DIALOG'])
 
 def tooltip(text):
     options = {'text':str(text)}
@@ -60,9 +62,11 @@ def completion_popup(proposals):
         
 
 def call_dialog(command, options=None, shell=True):
+    if shell:
+        command = shlex.split(command)
     popen = subprocess.Popen(
                  command,
-                 stdin=subprocess.PIPE, stdout=subprocess.PIPE,shell=shell)
+                 stdin=subprocess.PIPE, stdout=subprocess.PIPE)
     if options:
         out, _ = popen.communicate(to_plist(options))
     else:
